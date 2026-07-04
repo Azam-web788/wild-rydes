@@ -1,14 +1,21 @@
 {
   "name": "wild-rydes",
+  "type": "module",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@aws-amplify/ui-react": "^6.15.4",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^13.5.0",
+    "aws-amplify": "^6.18.0",
+    "leaflet": "^1.9.4",
+    "oidc-client-ts": "^3.5.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "react-leaflet": "^5.0.0",
+    "react-oidc-context": "^3.3.1",
     "react-scripts": "5.0.1",
     "web-vitals": "^2.1.4"
   },
@@ -16,7 +23,10 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "amplify-init": "npx ampx init",
+    "amplify-sandbox": "npx ampx sandbox",
+    "amplify-push": "npx ampx push"
   },
   "eslintConfig": {
     "extends": [
