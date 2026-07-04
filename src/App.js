@@ -261,7 +261,7 @@ function App() {
                 <div className="detail-icon">🦄</div>
                 <div className="detail-text">
                   <span className="detail-label">Unicorn</span>
-                  <span className="detail-value">{unicorn.Name}</span>
+                  <span className="detail-value">Name : {unicorn.Name}</span>
                 </div>
               </div>
               <div className="detail-item">
