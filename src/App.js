@@ -1,5 +1,4 @@
 ﻿import React, { useState, useCallback } from "react";
-import { useAuth } from "react-oidc-context";
 import {
   MapContainer,
   TileLayer,
@@ -9,6 +8,7 @@ import {
   useMapEvents,
 } from "react-leaflet";
 import L from "leaflet";
+import Login from "./Login.js";
 import "./App.css";
 import "leaflet/dist/leaflet.css";
 
@@ -39,7 +39,12 @@ function MapClickHandler({ onMapClick }) {
 }
 
 function App() {
-  const auth = useAuth();
+  const [isLocallyAuthenticated, setIsLocallyAuthenticated] = useState(
+    () => localStorage.getItem("isAuthenticated") === "true"
+  );
+  const [userEmail, setUserEmail] = useState(
+    () => localStorage.getItem("userEmail") || ""
+  );
   const [pickupLocation, setPickupLocation] = useState(null);
   const [unicorn, setUnicorn] = useState(null);
   const [isRequesting, setIsRequesting] = useState(false);
@@ -48,11 +53,19 @@ function App() {
 
   const defaultCenter = [37.7749, -122.4194];
 
+  const handleLoginSuccess = (email) => {
+    setUserEmail(email);
+    setIsLocallyAuthenticated(true);
+  };
+
   const signOutRedirect = () => {
-    const clientId = "70mqgaskbmfh79jevb3e47nhie";
-    const logoutUri = window.location.origin;
-    const cognitoDomain = "https://us-east-1wmqw7ftia.auth.us-east-1.amazoncognito.com";
-    window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(logoutUri)}`;
+    localStorage.removeItem("isAuthenticated");
+    localStorage.removeItem("userEmail");
+    setIsLocallyAuthenticated(false);
+    setUserEmail("");
+    setPickupLocation(null);
+    setUnicorn(null);
+    setMessage("");
   };
 
   const handleMapClick = useCallback((latlng) => {
@@ -70,8 +83,7 @@ function App() {
       return;
     }
 
-    const token = auth.user?.id_token || auth.user?.access_token;
-    if (!token) {
+    if (!isLocallyAuthenticated) {
       setMessage("❌ Please sign in again.");
       return;
     }
@@ -80,42 +92,31 @@ function App() {
     setMessage("🦄 Requesting your unicorn...");
 
     try {
-      const response = await fetch(`${API_INVOKE_URL}/ride`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          PickupLocation: {
-            Latitude: parseFloat(pickupLocation.lat),
-            Longitude: parseFloat(pickupLocation.lng),
-          },
-        }),
-      });
+      // Simulated unicorn data for demo purposes
+      const unicornNames = ['Sparkle', 'Rainbow', 'Magic', 'Mystique', 'Luna', 'Nova', 'Phoenix', 'Celestia'];
+      const unicornColors = ['Golden', 'White', 'Yellow'];
+      const unicornGenders = ['Male', 'Female'];
 
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
-      const data = await response.json();
-      const parsedBody = data.body ? 
-        (typeof data.body === "string" ? JSON.parse(data.body) : data.body) 
-        : data;
+      // Generate random unicorn
+      const randomUnicorn = {
+        Name: unicornNames[Math.floor(Math.random() * unicornNames.length)],
+        Color: unicornColors[Math.floor(Math.random() * unicornColors.length)],
+        Gender: unicornGenders[Math.floor(Math.random() * unicornGenders.length)],
+        RequestTime: new Date().toLocaleTimeString(),
+      };
 
-      if (!parsedBody.Unicorn) {
-        setMessage("❌ No unicorn assigned.");
-        setIsRequesting(false);
-        return;
-      }
-
-      setUnicorn(parsedBody.Unicorn);
-      setMessage(`🎉 ${parsedBody.Unicorn.Name} is on the way!`);
+      setUnicorn(randomUnicorn);
+      setMessage(`🎉 ${randomUnicorn.Name} is on the way!`);
     } catch (err) {
       console.error("Error:", err);
       setMessage("❌ Failed to request ride: " + err.message);
     } finally {
       setIsRequesting(false);
     }
-  }, [pickupLocation, auth.user]);
+  }, [pickupLocation, isLocallyAuthenticated]);
 
   const getColorStyle = (color) => {
     const colors = {
@@ -128,38 +129,8 @@ function App() {
 
   const getGenderIcon = (gender) => gender === 'Male' ? '♂️' : '♀️';
 
-  if (auth.isLoading) {
-    return (
-      <div className="loading-screen">
-        <div className="spinner">🦄</div>
-        <p>Loading Wild Rydes...</p>
-      </div>
-    );
-  }
-
-  if (auth.error) {
-    return (
-      <div className="error-screen">
-        <h2>⚠️ Something went wrong</h2>
-        <p>{auth.error.message}</p>
-        <button onClick={() => window.location.reload()}>Try Again</button>
-      </div>
-    );
-  }
-
-  if (!auth.isAuthenticated) {
-    return (
-      <div className="login-screen">
-        <div className="login-card">
-          <div className="logo">🦄</div>
-          <h1>Wild Rydes</h1>
-          <p>Book a magical unicorn ride in seconds!</p>
-          <button className="btn-primary" onClick={() => auth.signinRedirect()}>
-            Sign In to Ride
-          </button>
-        </div>
-      </div>
-    );
+  if (!isLocallyAuthenticated) {
+    return <Login onSignIn={handleLoginSuccess} />;
   }
 
   return (
@@ -167,7 +138,7 @@ function App() {
       <header className="app-header">
         <div className="logo">🦄 Wild Rydes</div>
         <div className="user-info">
-          <span>👤 {auth.user?.profile?.email || "Rider"}</span>
+          <span>👤 {userEmail || "Rider"}</span>
           <button className="btn-signout" onClick={signOutRedirect}>
             Sign Out
           </button>
@@ -184,7 +155,7 @@ function App() {
   >
     <TileLayer
       attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>'
-      url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+      url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
     />
 
     <MapClickHandler onMapClick={handleMapClick} />
