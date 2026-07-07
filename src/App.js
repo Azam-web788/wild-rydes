@@ -74,6 +74,7 @@ function App() {
       lng: latlng.lng.toFixed(4),
     });
     setUnicorn(null);
+    setUnicornPosition(null);
     setMessage("");
   }, []);
 
@@ -110,6 +111,41 @@ function App() {
 
       setUnicorn(randomUnicorn);
       setMessage(`🎉 ${randomUnicorn.Name} is on the way!`);
+
+      // Animate unicorn movement from random distant location to pickup point
+      const distance = 0.02;
+      const angle = Math.random() * Math.PI * 2; // Random angle 0-360 degrees
+      
+      const startLat = parseFloat(pickupLocation.lat) + (Math.cos(angle) * distance);
+      const startLng = parseFloat(pickupLocation.lng) + (Math.sin(angle) * distance);
+      const endLat = parseFloat(pickupLocation.lat);
+      const endLng = parseFloat(pickupLocation.lng);
+
+      let progress = 0;
+      const animationDuration = 4000; // 4 seconds
+      const startTime = Date.now();
+
+      const animateUnicorn = () => {
+        const elapsed = Date.now() - startTime;
+        progress = Math.min(elapsed / animationDuration, 1);
+
+        // Easing function for smooth movement
+        const easeProgress = 1 - Math.pow(1 - progress, 3);
+
+        const currentLat = startLat + (endLat - startLat) * easeProgress;
+        const currentLng = startLng + (endLng - startLng) * easeProgress;
+
+        setUnicornPosition({
+          lat: currentLat,
+          lng: currentLng,
+        });
+
+        if (progress < 1) {
+          requestAnimationFrame(animateUnicorn);
+        }
+      };
+
+      animateUnicorn();
     } catch (err) {
       console.error("Error:", err);
       setMessage("❌ Failed to request ride: " + err.message);
@@ -178,11 +214,11 @@ function App() {
     )}
 
     {/* Unicorn Marker */}
-    {unicorn && pickupLocation && (
+    {unicorn && unicornPosition && (
       <Marker
         position={[
-          parseFloat(pickupLocation.lat) + 0.002,
-          parseFloat(pickupLocation.lng) + 0.002,
+          unicornPosition.lat,
+          unicornPosition.lng,
         ]}
         icon={unicornIcon}
       >
@@ -195,7 +231,7 @@ function App() {
     )}
 
     {/* Route Line */}
-    {pickupLocation && unicorn && (
+    {pickupLocation && unicorn && unicornPosition && (
       <Polyline
         positions={[
           [
@@ -203,8 +239,8 @@ function App() {
             parseFloat(pickupLocation.lng),
           ],
           [
-            parseFloat(pickupLocation.lat) + 0.002,
-            parseFloat(pickupLocation.lng) + 0.002,
+            unicornPosition.lat,
+            unicornPosition.lng,
           ],
         ]}
         pathOptions={{
